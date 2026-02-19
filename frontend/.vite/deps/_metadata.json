@@ -1,0 +1,40 @@
+{
+  "hash": "7065cbd7",
+  "configHash": "75326bcd",
+  "lockfileHash": "8f7c325f",
+  "browserHash": "bd75c14d",
+  "optimized": {
+    "react": {
+      "src": "../../node_modules/react/index.js",
+      "file": "react.js",
+      "fileHash": "81d8dc87",
+      "needsInterop": true
+    },
+    "react-dom/client": {
+      "src": "../../node_modules/react-dom/client.js",
+      "file": "react-dom_client.js",
+      "fileHash": "3d665e3f",
+      "needsInterop": true
+    },
+    "react-cytoscapejs": {
+      "src": "../../node_modules/react-cytoscapejs/dist/react-cytoscape.modern.js",
+      "file": "react-cytoscapejs.js",
+      "fileHash": "b0003678",
+      "needsInterop": false
+    },
+    "axios": {
+      "src": "../../node_modules/axios/index.js",
+      "file": "axios.js",
+      "fileHash": "3a07fafd",
+      "needsInterop": false
+    }
+  },
+  "chunks": {
+    "chunk-VX2H6PUQ": {
+      "file": "chunk-VX2H6PUQ.js"
+    },
+    "chunk-G3PMV62Z": {
+      "file": "chunk-G3PMV62Z.js"
+    }
+  }
+}
