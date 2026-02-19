@@ -1,33 +1,34 @@
 import React from "react";
 
-function SummaryPanel({ summary }) {
+function SummaryPanel({ analysisData }) {
+  const summary = analysisData && analysisData.summary ? analysisData.summary : {};
   return (
     <div className="summary-grid">
       <div className="card">
         <p>Total Accounts</p>
         <div className="summary-value">
-          {summary.total_accounts_analyzed}
+          {summary.total_accounts_analyzed ?? '--'}
         </div>
       </div>
 
       <div className="card">
         <p>Suspicious Accounts</p>
         <div className="summary-value">
-          {summary.suspicious_accounts_flagged}
+          {summary.suspicious_accounts_flagged ?? '--'}
         </div>
       </div>
 
       <div className="card">
         <p>Fraud Rings</p>
         <div className="summary-value">
-          {summary.fraud_rings_detected}
+          {summary.fraud_rings_detected ?? '--'}
         </div>
       </div>
 
       <div className="card">
         <p>Processing Time (s)</p>
         <div className="summary-value">
-          {summary.processing_time_seconds}
+          {summary.processing_time_seconds ?? '--'}
         </div>
       </div>
     </div>

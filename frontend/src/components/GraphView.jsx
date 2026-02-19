@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
+import './GraphView.css';
 import * as d3 from "d3";
 
 function GraphView({ graph, suspicious = [], onNodeClick }) {
@@ -76,6 +77,7 @@ function GraphView({ graph, suspicious = [], onNodeClick }) {
         )
         .attr("stroke", "#0f172a")
         .attr("stroke-width", 2)
+        .attr("class", d => suspicious.find(s => s.account_id === d.id) ? "suspicious-node" : "")
         .style("cursor", "pointer")
         .call(
           d3.drag()
@@ -85,14 +87,53 @@ function GraphView({ graph, suspicious = [], onNodeClick }) {
         )
         .on("click", (event, d) => {
           const found = suspicious.find(s => s.account_id === d.id);
-
+          let nodeDetails = null;
           if (found) {
             setActiveRing(found.ring_id);
-            if (onNodeClick) onNodeClick(found);
+            nodeDetails = found;
           } else {
             setActiveRing(null);
+            nodeDetails = {
+              account_id: d.id,
+              suspicion_score: null,
+              detected_patterns: [],
+              ring_id: null,
+              is_legit: true
+            };
           }
+          if (onNodeClick) onNodeClick(nodeDetails);
+        })
+        .on("mouseover", function(event, d) {
+          const found = suspicious.find(s => s.account_id === d.id);
+          let html = `<div><strong>Account:</strong> ${d.id}</div>`;
+          if (found) {
+            html += `<div><strong>Risk:</strong> ${found.suspicion_score}</div>`;
+            html += `<div><strong>Patterns:</strong> ${found.detected_patterns.join(', ')}</div>`;
+          }
+          showTooltip(html, event.pageX, event.pageY);
+        })
+        .on("mouseout", function() {
+          hideTooltip();
         });
+
+      // Tooltip helpers
+      function showTooltip(html, x, y) {
+        let tooltip = document.getElementById('graph-tooltip');
+        if (!tooltip) {
+          tooltip = document.createElement('div');
+          tooltip.id = 'graph-tooltip';
+          tooltip.className = 'graph-tooltip';
+          document.body.appendChild(tooltip);
+        }
+        tooltip.innerHTML = html;
+        tooltip.style.display = 'block';
+        tooltip.style.left = (x + 12) + 'px';
+        tooltip.style.top = (y - 24) + 'px';
+      }
+      function hideTooltip() {
+        const tooltip = document.getElementById('graph-tooltip');
+        if (tooltip) tooltip.style.display = 'none';
+      }
 
       const label = svg
         .append("g")

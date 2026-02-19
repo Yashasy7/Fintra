@@ -62,21 +62,43 @@ async def upload_csv(file: UploadFile = File(...)):
             key=lambda x: x['suspicion_score'], 
             reverse=True
         )
-        
+
+        # Enforce strict schema for suspicious_accounts
+        suspicious_accounts_json = [
+            {
+                "account_id": str(acc["account_id"]),
+                "suspicion_score": float(acc["suspicion_score"]),
+                "detected_patterns": list(acc["detected_patterns"]),
+                "ring_id": str(acc["ring_id"])
+            }
+            for acc in suspicious_list
+        ]
+
+        # Enforce strict schema for fraud_rings
+        fraud_rings_json = [
+            {
+                "ring_id": str(ring["ring_id"]),
+                "member_accounts": [str(a) for a in ring["member_accounts"]],
+                "pattern_type": str(ring["pattern_type"]),
+                "risk_score": float(ring["risk_score"])
+            }
+            for ring in fraud_rings
+        ]
+
         processing_time = round(time.time() - start_time, 4)
-        
+
         # 5. FINAL RETURN: The "Winning" Response
         return {
-            "suspicious_accounts": suspicious_list,
-            "fraud_rings": fraud_rings,
+            "suspicious_accounts": suspicious_accounts_json,
+            "fraud_rings": fraud_rings_json,
             "graph": {
                 "nodes": [{"id": str(n)} for n in unique_nodes],
                 "edges": edges
             },
             "summary": {
                 "total_accounts_analyzed": len(unique_nodes),
-                "suspicious_accounts_flagged": len(suspicious_list),
-                "fraud_rings_detected": len(fraud_rings),
+                "suspicious_accounts_flagged": len(suspicious_accounts_json),
+                "fraud_rings_detected": len(fraud_rings_json),
                 "processing_time_seconds": processing_time
             }
         }

@@ -1,0 +1,28 @@
+/* Pulsing animation for suspicious nodes */
+.suspicious-node {
+  animation: pulse 1.2s infinite;
+  filter: drop-shadow(0 0 8px #ff4d4d88);
+}
+
+@keyframes pulse {
+  0% { r: 15; filter: drop-shadow(0 0 8px #ff4d4d88); }
+  50% { r: 19; filter: drop-shadow(0 0 16px #ff4d4dff); }
+  100% { r: 15; filter: drop-shadow(0 0 8px #ff4d4d88); }
+}
+
+.graph-tooltip {
+  position: absolute;
+  background: #222e3a;
+  color: #fff;
+  padding: 8px 14px;
+  border-radius: 8px;
+  font-size: 13px;
+  pointer-events: none;
+  z-index: 9999;
+  box-shadow: 0 2px 12px #0005;
+  border: 1px solid #334155;
+  min-width: 120px;
+  max-width: 260px;
+  opacity: 0.97;
+  transition: opacity 0.2s;
+}

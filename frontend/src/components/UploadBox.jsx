@@ -1,7 +1,7 @@
 import { useState } from "react";
 import axios from "axios";
 
-export default function UploadBox({ setData }) {
+export default function UploadBox({ setAnalysisData }) {
   const [file, setFile] = useState(null);
   const [loading, setLoading] = useState(false);
 
@@ -20,7 +20,7 @@ export default function UploadBox({ setData }) {
         { headers: { "Content-Type": "multipart/form-data" } }
       );
 
-      setData(response.data);
+      setAnalysisData(response.data);
     } catch (err) {
       console.error("Analysis failed:", err);
     } finally {
