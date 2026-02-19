@@ -1,7 +1,6 @@
 html, body, #root {
   height: 100%;
   margin: 0;
-  overflow: hidden;
   font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
   background: radial-gradient(circle at top left, #0f2027, #0a0f14 60%);
   color: #e6edf3;

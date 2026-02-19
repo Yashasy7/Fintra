@@ -1,8 +1,9 @@
 import { useState } from "react";
 import axios from "axios";
 
-export default function UploadBox({ setAnalysisData }) {
+export default function UploadBox({ setData }) {
   const [file, setFile] = useState(null);
+  const [loading, setLoading] = useState(false);
 
   const handleAnalyze = async () => {
     if (!file) return;
@@ -10,45 +11,39 @@ export default function UploadBox({ setAnalysisData }) {
     const formData = new FormData();
     formData.append("file", file);
 
-    const response = await axios.post(
-      "http://127.0.0.1:8000/analyze",
-      formData,
-      { headers: { "Content-Type": "multipart/form-data" } }
-    );
+    try {
+      setLoading(true);
 
-    setAnalysisData(response.data);
+      const response = await axios.post(
+        "http://127.0.0.1:8000/analyze",
+        formData,
+        { headers: { "Content-Type": "multipart/form-data" } }
+      );
+
+      setData(response.data);
+    } catch (err) {
+      console.error("Analysis failed:", err);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
-    <div style={boxStyle}>
+    <div className="upload-bar">
       <input
         type="file"
         accept=".csv"
         onChange={(e) => setFile(e.target.files[0])}
+        className="file-input"
       />
 
-      <button style={buttonStyle} onClick={handleAnalyze}>
-        Analyze Transactions
+      <button
+        className="analyze-btn"
+        onClick={handleAnalyze}
+        disabled={loading}
+      >
+        {loading ? "Analyzing..." : "Analyze"}
       </button>
     </div>
   );
 }
-
-const boxStyle = {
-  background: "rgba(255,255,255,0.05)",
-  padding: "14px",
-  borderRadius: "10px",
-  border: "1px solid rgba(255,255,255,0.08)",
-  display: "flex",
-  justifyContent: "space-between",
-  alignItems: "center"
-};
-
-const buttonStyle = {
-  padding: "8px 18px",
-  backgroundColor: "#1f8a70",
-  color: "white",
-  border: "none",
-  borderRadius: "6px",
-  cursor: "pointer"
-};

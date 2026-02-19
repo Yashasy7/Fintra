@@ -1,42 +1,180 @@
-#root {
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 2rem;
-  text-align: center;
+html, body, #root {
+  height: 100%;
 }
 
-.logo {
-  height: 6em;
-  padding: 1.5em;
-  will-change: filter;
-  transition: filter 300ms;
-}
-.logo:hover {
-  filter: drop-shadow(0 0 2em #646cffaa);
-}
-.logo.react:hover {
-  filter: drop-shadow(0 0 2em #61dafbaa);
+body {
+  margin: 0;
+  font-family: "Inter", sans-serif;
+  background: radial-gradient(circle at 20% 20%, #0f2027, #0b141b 60%, #05090c);
+  color: white;
 }
 
-@keyframes logo-spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
+/* ---------- CONTAINER ---------- */
+
+.app-container {
+  padding: 18px 28px;
+  max-width: 1400px;
+  margin: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
 }
 
-@media (prefers-reduced-motion: no-preference) {
-  a:nth-of-type(2) .logo {
-    animation: logo-spin infinite 20s linear;
-  }
+/* ---------- TOP BAR ---------- */
+
+.top-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
+
+.brand h1 {
+  margin: 0;
+  font-size: 1.5rem;
+  letter-spacing: 0.5px;
+}
+
+.subtitle {
+  font-size: 0.8rem;
+  opacity: 0.6;
+  margin-top: 2px;
+}
+
+/* ---------- DASHBOARD LAYOUT ---------- */
+
+.dashboard {
+  display: grid;
+  grid-template-columns: 2.4fr 1fr;
+  gap: 26px;
+  align-items: start;
+}
+
+/* LEFT COLUMN */
+
+.left-zone {
+  display: flex;
+  flex-direction: column;
+}
+
+/* RIGHT COLUMN */
+
+.right-zone {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+/* ---------- GRAPH CARD ---------- */
+
+.graph-card {
+  background: rgba(18, 25, 35, 0.75);
+  border-radius: 18px;
+  padding: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+/* ---------- RINGS SECTION ---------- */
+
+.rings-section {
+  margin-top: 20px;
+}
+
+/* ---------- CARDS ---------- */
 
 .card {
-  padding: 2em;
+  background: rgba(18, 25, 35, 0.75);
+  border-radius: 14px;
+  padding: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
 }
 
-.read-the-docs {
-  color: #888;
+/* ---------- SUMMARY PANEL ---------- */
+
+.summary-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+}
+
+.summary-grid .card {
+  min-height: 72px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.summary-value {
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: #00f5c4;
+  margin-top: 4px;
+}
+
+/* ---------- TABLE ---------- */
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 10px;
+}
+
+th, td {
+  padding: 8px;
+  text-align: left;
+}
+
+th {
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+  color: #00f5c4;
+}
+
+tr:nth-child(even) {
+  background: rgba(255,255,255,0.03);
+}
+
+/* ---------- BUTTON ---------- */
+
+.download-btn,
+.analyze-btn {
+  background: linear-gradient(135deg, #00f5c4, #00c9a7);
+  border-radius: 8px;
+  padding: 8px 14px;
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+  transition: 0.2s ease;
+  font-size: 0.85rem;
+}
+
+.download-btn:hover,
+.analyze-btn:hover {
+  transform: translateY(-1px);
+}
+
+/* ---------- RISK BAR ---------- */
+
+.risk-bar {
+  height: 6px;
+  background: #1a2633;
+  border-radius: 8px;
+  margin: 8px 0;
+}
+
+.risk-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #ff4d4d, #ff0000);
+  border-radius: 8px;
+}
+
+/* ---------- UPLOAD BAR ---------- */
+
+.upload-bar {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.file-input {
+  font-size: 0.8rem;
+  color: #cbd5e1;
 }
