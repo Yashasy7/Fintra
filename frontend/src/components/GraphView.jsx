@@ -1,244 +1,382 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState, useCallback } from "react";
 import './GraphView.css';
-import * as d3 from "d3";
+
+// Performance thresholds
+const MAX_NODES_FOR_FULL_RENDER = 500;
+const MAX_NODES_FOR_LABELS = 100;
+const SAMPLE_PERCENTAGE = 0.05; // 5% of normal nodes when sampling
 
 function GraphView({ graph, suspicious = [], onNodeClick }) {
-  const svgRef = useRef();
-  const simulationRef = useRef(null);
-  const resizeObserverRef = useRef(null);
+  const canvasRef = useRef(null);
+  const containerRef = useRef(null);
+  const [dimensions, setDimensions] = useState({ width: 800, height: 600 });
   const [activeRing, setActiveRing] = useState(null);
+  const [hoveredNode, setHoveredNode] = useState(null);
+  const [tooltip, setTooltip] = useState({ show: false, x: 0, y: 0, content: null });
+  
+  // Transform state for pan/zoom
+  const [transform, setTransform] = useState({ x: 0, y: 0, scale: 1 });
+  const [isPanning, setIsPanning] = useState(false);
+  const [lastMouse, setLastMouse] = useState({ x: 0, y: 0 });
+  
+  // Processed graph data
+  const processedDataRef = useRef({ nodes: [], edges: [], positions: {} });
+  const suspiciousSetRef = useRef(new Set());
 
-  useEffect(() => {
-    if (!graph || !graph.nodes) return;
+  // Sample and process graph data for performance
+  const processGraphData = useCallback((graph, suspicious) => {
+    if (!graph || !graph.nodes) return { nodes: [], edges: [], positions: {} };
 
-    const svgElement = svgRef.current;
-    if (!svgElement) return;
+    const suspiciousIds = new Set(suspicious.map(s => s.account_id));
+    suspiciousSetRef.current = suspiciousIds;
+    
+    let nodesToRender = [];
+    let nodeIdSet = new Set();
 
-    function draw() {
-      const width = svgElement.clientWidth || 800;
-      const height = 600;
-
-      if (simulationRef.current) {
-        try { simulationRef.current.stop(); } catch (e) {}
-        simulationRef.current = null;
+    // Always include all suspicious accounts
+    graph.nodes.forEach(node => {
+      if (suspiciousIds.has(node.id)) {
+        nodesToRender.push({ ...node, isSuspicious: true });
+        nodeIdSet.add(node.id);
       }
+    });
 
-      const svg = d3.select(svgElement);
-      svg.selectAll("*").remove();
-
-      svg.attr("viewBox", null)
-         .attr("width", width)
-         .attr("height", height);
-
-      graph.nodes.forEach(n => {
-        if (n.x == null || n.y == null) {
-          n.x = width / 2 + (Math.random() - 0.5) * 120;
-          n.y = height / 2 + (Math.random() - 0.5) * 120;
+    // If total nodes exceed threshold, sample normal nodes
+    const normalNodes = graph.nodes.filter(n => !suspiciousIds.has(n.id));
+    
+    if (graph.nodes.length > MAX_NODES_FOR_FULL_RENDER) {
+      // Sample a percentage of normal nodes
+      const sampleSize = Math.min(
+        Math.ceil(normalNodes.length * SAMPLE_PERCENTAGE),
+        MAX_NODES_FOR_FULL_RENDER - nodesToRender.length
+      );
+      
+      // Prioritize nodes that have edges to suspicious accounts
+      const edgeConnectedNodes = new Set();
+      graph.edges.forEach(edge => {
+        if (suspiciousIds.has(edge.source) || suspiciousIds.has(edge.target)) {
+          edgeConnectedNodes.add(edge.source);
+          edgeConnectedNodes.add(edge.target);
         }
       });
 
-      const simulation = d3
-        .forceSimulation(graph.nodes)
-        .force(
-          "link",
-          d3.forceLink(graph.edges)
-            .id(d => d.id)
-            .distance(130)
-            .strength(0.8)
-        )
-        .force("charge", d3.forceManyBody().strength(-250))
-        .force("collision", d3.forceCollide().radius(30))
-        .force("center", d3.forceCenter(width / 2, height / 2))
-        .alphaDecay(0.05);
-
-      simulationRef.current = simulation;
-      simulation.alpha(1).restart();
-
-      const link = svg
-        .append("g")
-        .selectAll("line")
-        .data(graph.edges)
-        .enter()
-        .append("line")
-        .attr("stroke", "#334155")
-        .attr("stroke-width", 1.5);
-
-      const node = svg
-        .append("g")
-        .selectAll("circle")
-        .data(graph.nodes)
-        .enter()
-        .append("circle")
-        .attr("r", 15)
-        .attr("fill", d =>
-          suspicious.find(s => s.account_id === d.id)
-            ? "#ff4d4d"
-            : "#00f5c4"
-        )
-        .attr("stroke", "#0f172a")
-        .attr("stroke-width", 2)
-        .attr("class", d => suspicious.find(s => s.account_id === d.id) ? "suspicious-node" : "")
-        .style("cursor", "pointer")
-        .call(
-          d3.drag()
-            .on("start", dragstarted)
-            .on("drag", dragged)
-            .on("end", dragended)
-        )
-        .on("click", (event, d) => {
-          const found = suspicious.find(s => s.account_id === d.id);
-          let nodeDetails = null;
-          if (found) {
-            setActiveRing(found.ring_id);
-            nodeDetails = found;
-          } else {
-            setActiveRing(null);
-            nodeDetails = {
-              account_id: d.id,
-              suspicion_score: null,
-              detected_patterns: [],
-              ring_id: null,
-              is_legit: true
-            };
-          }
-          if (onNodeClick) onNodeClick(nodeDetails);
-        })
-        .on("mouseover", function(event, d) {
-          const found = suspicious.find(s => s.account_id === d.id);
-          let html = `<div><strong>Account:</strong> ${d.id}</div>`;
-          if (found) {
-            html += `<div><strong>Risk:</strong> ${found.suspicion_score}</div>`;
-            html += `<div><strong>Patterns:</strong> ${found.detected_patterns.join(', ')}</div>`;
-          }
-          showTooltip(html, event.pageX, event.pageY);
-        })
-        .on("mouseout", function() {
-          hideTooltip();
-        });
-
-      // Tooltip helpers
-      function showTooltip(html, x, y) {
-        let tooltip = document.getElementById('graph-tooltip');
-        if (!tooltip) {
-          tooltip = document.createElement('div');
-          tooltip.id = 'graph-tooltip';
-          tooltip.className = 'graph-tooltip';
-          document.body.appendChild(tooltip);
+      // Add connected normal nodes first
+      normalNodes.forEach(node => {
+        if (edgeConnectedNodes.has(node.id) && !nodeIdSet.has(node.id) && nodesToRender.length < MAX_NODES_FOR_FULL_RENDER) {
+          nodesToRender.push({ ...node, isSuspicious: false });
+          nodeIdSet.add(node.id);
         }
-        tooltip.innerHTML = html;
-        tooltip.style.display = 'block';
-        tooltip.style.left = (x + 12) + 'px';
-        tooltip.style.top = (y - 24) + 'px';
-      }
-      function hideTooltip() {
-        const tooltip = document.getElementById('graph-tooltip');
-        if (tooltip) tooltip.style.display = 'none';
-      }
-
-      const label = svg
-        .append("g")
-        .selectAll("text")
-        .data(graph.nodes)
-        .enter()
-        .append("text")
-        .text(d => d.id)
-        .attr("font-size", "11px")
-        .attr("fill", "#cbd5e1");
-
-      simulation.on("tick", () => {
-        link
-          .attr("x1", d => clamp(d.source.x, 20, width - 20))
-          .attr("y1", d => clamp(d.source.y, 20, height - 20))
-          .attr("x2", d => clamp(d.target.x, 20, width - 20))
-          .attr("y2", d => clamp(d.target.y, 20, height - 20));
-
-        node
-          .attr("cx", d => d.x = clamp(d.x, 20, width - 20))
-          .attr("cy", d => d.y = clamp(d.y, 20, height - 20));
-
-        label
-          .attr("x", d => d.x + 18)
-          .attr("y", d => d.y + 4);
       });
 
-      // === RING HIGHLIGHT LOGIC ===
-      if (activeRing) {
-        const ringMembers = suspicious
-          .filter(s => s.ring_id === activeRing)
-          .map(s => s.account_id);
-
-        node
-          .transition()
-          .duration(300)
-          .attr("opacity", d =>
-            ringMembers.includes(d.id) ? 1 : 0.15
-          )
-          .attr("stroke", d =>
-            ringMembers.includes(d.id) ? "#ffffff" : "#0f172a"
-          )
-          .attr("stroke-width", d =>
-            ringMembers.includes(d.id) ? 3 : 1
-          );
-
-        link
-          .transition()
-          .duration(300)
-          .attr("opacity", d =>
-            ringMembers.includes(d.source.id) &&
-            ringMembers.includes(d.target.id)
-              ? 1
-              : 0.1
-          )
-          .attr("stroke-width", d =>
-            ringMembers.includes(d.source.id) &&
-            ringMembers.includes(d.target.id)
-              ? 3
-              : 1
-          );
-      }
-
-      setTimeout(() => {
-        try { simulation.stop(); } catch (e) {}
-      }, 2500);
-
-      function clamp(value, min, max) {
-        return Math.max(min, Math.min(max, value));
-      }
-
-      function dragstarted(event) {
-        if (!event.active) simulation.alphaTarget(0.3).restart();
-        event.subject.fx = event.subject.x;
-        event.subject.fy = event.subject.y;
-      }
-
-      function dragged(event) {
-        event.subject.fx = event.x;
-        event.subject.fy = event.y;
-      }
-
-      function dragended(event) {
-        if (!event.active) simulation.alphaTarget(0);
-        event.subject.fx = null;
-        event.subject.fy = null;
-      }
+      // Fill remaining with random sample
+      const remainingNormal = normalNodes.filter(n => !nodeIdSet.has(n.id));
+      const shuffled = remainingNormal.sort(() => Math.random() - 0.5);
+      const remaining = Math.max(0, sampleSize - (nodesToRender.length - suspicious.length));
+      
+      shuffled.slice(0, remaining).forEach(node => {
+        nodesToRender.push({ ...node, isSuspicious: false });
+        nodeIdSet.add(node.id);
+      });
+    } else {
+      // Include all nodes if under threshold
+      normalNodes.forEach(node => {
+        nodesToRender.push({ ...node, isSuspicious: false });
+        nodeIdSet.add(node.id);
+      });
     }
 
-    draw();
+    // Filter edges to only include rendered nodes
+    const edgesToRender = graph.edges.filter(
+      edge => nodeIdSet.has(edge.source) && nodeIdSet.has(edge.target)
+    );
 
-    const ro = new ResizeObserver(() => draw());
-    resizeObserverRef.current = ro;
-    if (svgElement.parentElement) ro.observe(svgElement.parentElement);
+    // Compute positions using a fast grid-based layout
+    const positions = computeFastLayout(nodesToRender, edgesToRender, suspiciousIds, 800, 600);
 
-    const onWin = () => draw();
-    window.addEventListener("resize", onWin);
+    return { nodes: nodesToRender, edges: edgesToRender, positions };
+  }, []);
 
-    return () => {
-      if (resizeObserverRef.current) resizeObserverRef.current.disconnect();
-      window.removeEventListener("resize", onWin);
-      if (simulationRef.current) simulationRef.current.stop();
-    };
+  // Fast layout algorithm - cluster suspicious nodes, spread others
+  function computeFastLayout(nodes, edges, suspiciousIds, width, height) {
+    const positions = {};
+    const padding = 60;
+    const availWidth = width - 2 * padding;
+    const availHeight = height - 2 * padding;
 
-  }, [graph, suspicious, activeRing, onNodeClick]);
+    // Separate suspicious and normal nodes
+    const suspiciousNodes = nodes.filter(n => suspiciousIds.has(n.id));
+    const normalNodes = nodes.filter(n => !suspiciousIds.has(n.id));
+
+    // Place suspicious nodes in center cluster
+    const suspiciousCount = suspiciousNodes.length;
+    const suspiciousRadius = Math.min(availWidth, availHeight) * 0.3;
+    
+    suspiciousNodes.forEach((node, i) => {
+      const angle = (2 * Math.PI * i) / Math.max(suspiciousCount, 1);
+      const r = suspiciousRadius * (0.3 + Math.random() * 0.7);
+      positions[node.id] = {
+        x: width / 2 + r * Math.cos(angle),
+        y: height / 2 + r * Math.sin(angle)
+      };
+    });
+
+    // Place normal nodes in outer ring
+    const normalCount = normalNodes.length;
+    const outerRadius = Math.min(availWidth, availHeight) * 0.45;
+    
+    normalNodes.forEach((node, i) => {
+      const angle = (2 * Math.PI * i) / Math.max(normalCount, 1);
+      const r = outerRadius + Math.random() * 30;
+      positions[node.id] = {
+        x: width / 2 + r * Math.cos(angle),
+        y: height / 2 + r * Math.sin(angle)
+      };
+    });
+
+    return positions;
+  }
+
+  // Process data when graph changes
+  useEffect(() => {
+    if (!graph || !graph.nodes) return;
+    
+    const processed = processGraphData(graph, suspicious);
+    processedDataRef.current = processed;
+    
+    // Reset transform for new data
+    setTransform({ x: 0, y: 0, scale: 1 });
+  }, [graph, suspicious, processGraphData]);
+
+  // ResizeObserver
+  useEffect(() => {
+    if (!containerRef.current) return;
+    
+    const ro = new ResizeObserver(entries => {
+      for (const entry of entries) {
+        const { width, height } = entry.contentRect;
+        if (width > 0 && height > 0) {
+          setDimensions({ width, height });
+        }
+      }
+    });
+    
+    ro.observe(containerRef.current);
+    return () => ro.disconnect();
+  }, []);
+
+  // Draw on Canvas
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    
+    const ctx = canvas.getContext('2d');
+    const { width, height } = dimensions;
+    const { nodes, edges, positions } = processedDataRef.current;
+    const { x: panX, y: panY, scale } = transform;
+
+    // Clear canvas
+    ctx.fillStyle = '#0f172a';
+    ctx.fillRect(0, 0, width, height);
+
+    if (nodes.length === 0) return;
+
+    // Apply transform
+    ctx.save();
+    ctx.translate(width / 2 + panX, height / 2 + panY);
+    ctx.scale(scale, scale);
+    ctx.translate(-width / 2, -height / 2);
+
+    // Get active ring members for highlighting
+    const activeRingMembers = activeRing
+      ? new Set(suspicious.filter(s => s.ring_id === activeRing).map(s => s.account_id))
+      : null;
+
+    // Draw edges
+    ctx.lineWidth = 1 / scale;
+    edges.forEach(edge => {
+      const sourcePos = positions[edge.source];
+      const targetPos = positions[edge.target];
+      if (!sourcePos || !targetPos) return;
+
+      const isHighlighted = activeRingMembers && 
+        activeRingMembers.has(edge.source) && 
+        activeRingMembers.has(edge.target);
+
+      ctx.strokeStyle = isHighlighted ? '#00f5c4' : '#334155';
+      ctx.globalAlpha = activeRingMembers ? (isHighlighted ? 1 : 0.1) : 0.5;
+      ctx.lineWidth = isHighlighted ? 2 / scale : 1 / scale;
+
+      ctx.beginPath();
+      ctx.moveTo(sourcePos.x, sourcePos.y);
+      ctx.lineTo(targetPos.x, targetPos.y);
+      ctx.stroke();
+    });
+
+    ctx.globalAlpha = 1;
+
+    // Draw nodes
+    const nodeRadius = 12;
+    nodes.forEach(node => {
+      const pos = positions[node.id];
+      if (!pos) return;
+
+      const isSuspicious = node.isSuspicious;
+      const isInActiveRing = activeRingMembers && activeRingMembers.has(node.id);
+      const isHovered = hoveredNode === node.id;
+
+      // Opacity based on ring highlight
+      ctx.globalAlpha = activeRingMembers ? (isInActiveRing ? 1 : 0.15) : 1;
+
+      // Draw node circle
+      ctx.beginPath();
+      ctx.arc(pos.x, pos.y, isHovered ? nodeRadius + 3 : nodeRadius, 0, 2 * Math.PI);
+      ctx.fillStyle = isSuspicious ? '#ff4d4d' : '#00f5c4';
+      ctx.fill();
+      
+      // Border
+      ctx.strokeStyle = isInActiveRing ? '#ffffff' : (isHovered ? '#ffffff' : '#0f172a');
+      ctx.lineWidth = (isInActiveRing || isHovered) ? 3 / scale : 2 / scale;
+      ctx.stroke();
+    });
+
+    ctx.globalAlpha = 1;
+
+    // Draw labels only if few enough nodes
+    if (nodes.length <= MAX_NODES_FOR_LABELS) {
+      ctx.font = `${11 / scale}px sans-serif`;
+      ctx.fillStyle = '#cbd5e1';
+      nodes.forEach(node => {
+        const pos = positions[node.id];
+        if (!pos) return;
+        ctx.fillText(node.id, pos.x + nodeRadius + 4, pos.y + 4);
+      });
+    }
+
+    ctx.restore();
+
+    // Draw stats overlay
+    ctx.fillStyle = 'rgba(15, 23, 42, 0.8)';
+    ctx.fillRect(10, 10, 200, 60);
+    ctx.fillStyle = '#94a3b8';
+    ctx.font = '12px sans-serif';
+    ctx.fillText(`Showing: ${nodes.length} nodes, ${edges.length} edges`, 20, 30);
+    ctx.fillText(`Zoom: ${(scale * 100).toFixed(0)}%`, 20, 48);
+    if (graph && graph.nodes.length > nodes.length) {
+      ctx.fillStyle = '#fbbf24';
+      ctx.fillText(`(Sampled from ${graph.nodes.length} total)`, 20, 64);
+    }
+
+  }, [dimensions, transform, activeRing, hoveredNode, suspicious, graph]);
+
+  // Screen to world coordinates
+  const screenToWorld = useCallback((screenX, screenY) => {
+    const { x: panX, y: panY, scale } = transform;
+    const { width, height } = dimensions;
+    const worldX = (screenX - width / 2 - panX) / scale + width / 2;
+    const worldY = (screenY - height / 2 - panY) / scale + height / 2;
+    return { x: worldX, y: worldY };
+  }, [transform, dimensions]);
+
+  // Find node at position
+  const findNodeAt = useCallback((worldX, worldY) => {
+    const { nodes, positions } = processedDataRef.current;
+    const nodeRadius = 12;
+    
+    for (const node of nodes) {
+      const pos = positions[node.id];
+      if (!pos) continue;
+      const dist = Math.sqrt((worldX - pos.x) ** 2 + (worldY - pos.y) ** 2);
+      if (dist < nodeRadius + 5) return node;
+    }
+    return null;
+  }, []);
+
+  // Mouse handlers
+  const handleMouseDown = (e) => {
+    setIsPanning(true);
+    setLastMouse({ x: e.clientX, y: e.clientY });
+  };
+
+  const handleMouseMove = (e) => {
+    const rect = canvasRef.current?.getBoundingClientRect();
+    if (!rect) return;
+
+    if (isPanning) {
+      const dx = e.clientX - lastMouse.x;
+      const dy = e.clientY - lastMouse.y;
+      setTransform(prev => ({ ...prev, x: prev.x + dx, y: prev.y + dy }));
+      setLastMouse({ x: e.clientX, y: e.clientY });
+      return;
+    }
+
+    // Hover detection
+    const screenX = e.clientX - rect.left;
+    const screenY = e.clientY - rect.top;
+    const world = screenToWorld(screenX, screenY);
+    const node = findNodeAt(world.x, world.y);
+
+    if (node) {
+      setHoveredNode(node.id);
+      const found = suspicious.find(s => s.account_id === node.id);
+      setTooltip({
+        show: true,
+        x: e.clientX,
+        y: e.clientY,
+        content: found ? {
+          id: node.id,
+          risk: found.suspicion_score,
+          patterns: found.detected_patterns
+        } : { id: node.id, isNormal: true }
+      });
+    } else {
+      setHoveredNode(null);
+      setTooltip({ show: false, x: 0, y: 0, content: null });
+    }
+  };
+
+  const handleMouseUp = () => setIsPanning(false);
+  const handleMouseLeave = () => {
+    setIsPanning(false);
+    setTooltip({ show: false, x: 0, y: 0, content: null });
+  };
+
+  const handleWheel = (e) => {
+    e.preventDefault();
+    const zoomFactor = e.deltaY > 0 ? 0.9 : 1.1;
+    setTransform(prev => ({
+      ...prev,
+      scale: Math.min(Math.max(prev.scale * zoomFactor, 0.2), 5)
+    }));
+  };
+
+  const handleClick = (e) => {
+    const rect = canvasRef.current?.getBoundingClientRect();
+    if (!rect) return;
+
+    const screenX = e.clientX - rect.left;
+    const screenY = e.clientY - rect.top;
+    const world = screenToWorld(screenX, screenY);
+    const node = findNodeAt(world.x, world.y);
+
+    if (node) {
+      const found = suspicious.find(s => s.account_id === node.id);
+      if (found) {
+        setActiveRing(found.ring_id);
+        if (onNodeClick) onNodeClick(found);
+      } else {
+        setActiveRing(null);
+        if (onNodeClick) onNodeClick({
+          account_id: node.id,
+          suspicion_score: null,
+          detected_patterns: [],
+          ring_id: null,
+          is_legit: true
+        });
+      }
+    }
+  };
+
+  const resetView = () => setTransform({ x: 0, y: 0, scale: 1 });
 
   if (!graph || !graph.nodes) {
     return (
@@ -249,11 +387,108 @@ function GraphView({ graph, suspicious = [], onNodeClick }) {
   }
 
   return (
-    <svg
-      ref={svgRef}
-      width="100%"
-      height="600"
-    />
+    <div ref={containerRef} style={{ position: 'relative', width: '100%', height: '600px' }}>
+      <canvas
+        ref={canvasRef}
+        width={dimensions.width}
+        height={dimensions.height}
+        onMouseDown={handleMouseDown}
+        onMouseMove={handleMouseMove}
+        onMouseUp={handleMouseUp}
+        onMouseLeave={handleMouseLeave}
+        onWheel={handleWheel}
+        onClick={handleClick}
+        style={{
+          cursor: isPanning ? 'grabbing' : 'grab',
+          display: 'block'
+        }}
+      />
+      
+      {/* Controls */}
+      <div style={{
+        position: 'absolute',
+        top: 10,
+        right: 10,
+        display: 'flex',
+        gap: '8px'
+      }}>
+        <button
+          onClick={resetView}
+          style={{
+            padding: '6px 12px',
+            background: '#1e293b',
+            border: '1px solid #334155',
+            color: '#94a3b8',
+            borderRadius: '4px',
+            cursor: 'pointer',
+            fontSize: '12px'
+          }}
+        >
+          Reset View
+        </button>
+        {activeRing && (
+          <button
+            onClick={() => setActiveRing(null)}
+            style={{
+              padding: '6px 12px',
+              background: '#1e293b',
+              border: '1px solid #334155',
+              color: '#94a3b8',
+              borderRadius: '4px',
+              cursor: 'pointer',
+              fontSize: '12px'
+            }}
+          >
+            Clear Highlight
+          </button>
+        )}
+      </div>
+
+      {/* Instructions */}
+      <div style={{
+        position: 'absolute',
+        bottom: 10,
+        left: 10,
+        fontSize: '11px',
+        color: '#64748b',
+        background: 'rgba(15, 23, 42, 0.8)',
+        padding: '6px 10px',
+        borderRadius: '4px'
+      }}>
+        Drag to pan • Scroll to zoom • Click node to inspect
+      </div>
+
+      {/* Tooltip */}
+      {tooltip.show && tooltip.content && (
+        <div
+          className="graph-tooltip"
+          style={{
+            position: 'fixed',
+            left: tooltip.x + 12,
+            top: tooltip.y - 10,
+            background: '#1e293b',
+            border: '1px solid #334155',
+            borderRadius: '6px',
+            padding: '8px 12px',
+            color: '#e2e8f0',
+            fontSize: '12px',
+            pointerEvents: 'none',
+            zIndex: 1000
+          }}
+        >
+          <div><strong>Account:</strong> {tooltip.content.id}</div>
+          {tooltip.content.risk != null && (
+            <div><strong>Risk:</strong> {tooltip.content.risk}</div>
+          )}
+          {tooltip.content.patterns && tooltip.content.patterns.length > 0 && (
+            <div><strong>Patterns:</strong> {tooltip.content.patterns.join(', ')}</div>
+          )}
+          {tooltip.content.isNormal && (
+            <div style={{ color: '#22c55e' }}>✓ Normal Account</div>
+          )}
+        </div>
+      )}
+    </div>
   );
 }
 
