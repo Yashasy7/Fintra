@@ -10,7 +10,7 @@ app = FastAPI(title="RIFT 2026 Forensic Engine - Production")
 # ✅ Mandatory for Hackathon: Enable CORS so the Frontend can communicate with Backend
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["https://fintra-plum.vercel.app"],
     allow_methods=["*"],
     allow_headers=["*"],
 )
