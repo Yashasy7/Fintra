@@ -31,8 +31,10 @@ function App() {
 
       <div style={middleRow}>
         <div style={graphColumn}>
-          <GraphLegend />
-          <div style={graphSection}>
+          <div style={graphWrapper}>
+            <div style={legendOverlay}>
+              <GraphLegend />
+            </div>
             <GraphView
               graph={analysisData && analysisData.graph ? analysisData.graph : null}
               suspicious={analysisData && analysisData.suspicious_accounts ? analysisData.suspicious_accounts : []}
@@ -132,19 +134,31 @@ const middleRow = {
 };
 
 const graphColumn = {
-  flex: 1,
+  flex: 3,
   display: 'flex',
   flexDirection: 'column',
   minWidth: 0,
 };
 
-const graphSection = {
+const graphWrapper = {
+  position: 'relative',
   flex: 1,
   minHeight: 0,
+  borderRadius: '14px',
+  overflow: 'hidden',
+  background: '#0f172a',
+  border: '1px solid rgba(255,255,255,0.05)',
+};
+
+const legendOverlay = {
+  position: 'absolute',
+  top: 10,
+  left: 10,
+  zIndex: 10,
 };
 
 const investigationColumn = {
-  flex: 1,
+  flex: 2,
   display: 'flex',
   flexDirection: 'column',
   minWidth: 0,

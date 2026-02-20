@@ -9,7 +9,7 @@ const legendItems = [
 
 export default function GraphLegend() {
   return (
-    <div style={{ background: "#1a2233", borderRadius: 8, padding: 12, margin: 8, color: "#cbd5e1", fontSize: 13, boxShadow: "0 2px 8px #0002", maxWidth: 220 }}>
+    <div style={{ background: "rgba(26, 34, 51, 0.92)", borderRadius: 8, padding: 12, color: "#cbd5e1", fontSize: 13, boxShadow: "0 2px 8px #0003", maxWidth: 200, backdropFilter: 'blur(4px)' }}>
       <strong style={{ fontSize: 14 }}>Legend</strong>
       <ul style={{ listStyle: "none", padding: 0, margin: "8px 0 0 0" }}>
         {legendItems.map((item, i) => (
