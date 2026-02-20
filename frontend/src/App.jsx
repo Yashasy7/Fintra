@@ -29,8 +29,8 @@ function App() {
         <SummaryPanel analysisData={analysisData} />
       </div>
 
-      <div style={mainContent}>
-        <div style={{ display: 'flex', flexDirection: 'column', flex: 3 }}>
+      <div style={middleRow}>
+        <div style={graphColumn}>
           <GraphLegend />
           <div style={graphSection}>
             <GraphView
@@ -41,11 +41,14 @@ function App() {
           </div>
         </div>
 
-        <div style={sideSection}>
+        <div style={investigationColumn}>
           <InvestigationPanel account={selectedAccount} />
-          <RingTable analysisData={analysisData} />
-          <DownloadButton analysisData={analysisData} />
         </div>
+      </div>
+
+      <div style={bottomRow}>
+        <RingTable analysisData={analysisData} />
+        <DownloadButton analysisData={analysisData} />
       </div>
 
       <footer style={footerStyle}>
@@ -117,27 +120,40 @@ const headerStyle = {
   color: '#f5f7fa',
 };
 
-const mainContent = {
-  flex: 1,
-  display: "flex",
-  gap: "14px",
-  marginTop: "10px",
+const middleRow = {
+  display: 'flex',
+  gap: '16px',
   width: '100%',
   maxWidth: 1100,
   margin: '0 auto',
+  marginTop: '10px',
+  alignItems: 'stretch',
+  minHeight: 500,
+};
+
+const graphColumn = {
+  flex: 1,
+  display: 'flex',
+  flexDirection: 'column',
+  minWidth: 0,
 };
 
 const graphSection = {
-  flex: 3,
-  height: "100%"
+  flex: 1,
+  minHeight: 0,
 };
 
-const sideSection = {
-  flex: 1.2,
-  display: "flex",
-  flexDirection: "column",
-  gap: "12px",
-  overflow: "hidden"
+const investigationColumn = {
+  flex: 1,
+  display: 'flex',
+  flexDirection: 'column',
+  minWidth: 0,
+};
+
+const bottomRow = {
+  width: '100%',
+  maxWidth: 1100,
+  margin: '18px auto 0 auto',
 };
 
 const footerStyle = {

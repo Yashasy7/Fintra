@@ -3,14 +3,14 @@ import React from "react";
 function InvestigationPanel({ account }) {
   if (!account)
     return (
-      <div className="card">
+      <div className="card" style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
         <h3>Account Investigation</h3>
         <p>Select a node to investigate.</p>
       </div>
     );
 
   return (
-    <div className="card">
+    <div className="card" style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
       <h3>Account Investigation</h3>
       <p><strong>ID:</strong> {account.account_id}</p>
 

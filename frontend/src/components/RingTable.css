@@ -1,10 +1,12 @@
 /* Enhanced Fraud Rings Table Styles */
 .ring-table-card {
-  margin-top: 30px;
+  margin-top: 0;
   background: rgba(20, 28, 38, 0.98);
   border-radius: 18px;
   box-shadow: 0 2px 16px #0003;
   padding: 18px 18px 10px 18px;
+  width: 100%;
+  box-sizing: border-box;
 }
 .ring-table-wrapper {
   overflow-x: auto;

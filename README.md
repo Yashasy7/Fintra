@@ -7,9 +7,9 @@ Fintra is a specialized financial forensics engine designed to expose sophistica
 ---
 
 ## 🚀 Live Links
-- [cite_start]**Live Application:** [[Your Deployed URL]]([Your Link Here]) [cite: 61, 65]
-- [cite_start]**Demo Video:** [[LinkedIn Walkthrough]]([Your Link Here]) [cite: 62, 66]
-- [cite_start]**GitHub Repository:** [https://github.com/Yashasy7/Fintra](https://github.com/Yashasy7/Fintra) [cite: 62, 64]
+- [cite_start]**Live Application:** [https://fintra-plum.vercel.app] (https://fintra-plum.vercel.app) [cite: 61, 65]
+- [cite_start]**Demo Video:** [https://www.linkedin.com/posts/yashas-h-l-a36674305_rifthackathon-moneymulingdetection-financialcrime-activity-7430424039845941248-CZgq?utm_source=share&utm_medium=member_desktop&rcm=ACoAAE3f78oBrCdtOkVXi33nJZuJDzhVWOqTlVE] (https://www.linkedin.com/posts/yashas-h-l-a36674305_rifthackathon-moneymulingdetection-financialcrime-activity-7430424039845941248-CZgq?utm_source=share&utm_medium=member_desktop&rcm=ACoAAE3f78oBrCdtOkVXi33nJZuJDzhVWOqTlVE) [cite: 62, 66]
+- [cite_start]**GitHub Repository:** [https://github.com/Praju0911/Fintra](https://github.com/Praju0911/Fintra) [cite: 62, 64]
 
 ---
 

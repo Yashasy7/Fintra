@@ -387,7 +387,7 @@ function GraphView({ graph, suspicious = [], onNodeClick }) {
   }
 
   return (
-    <div ref={containerRef} style={{ position: 'relative', width: '100%', height: '600px' }}>
+    <div ref={containerRef} style={{ position: 'relative', width: '100%', height: '100%', minHeight: '450px' }}>
       <canvas
         ref={canvasRef}
         width={dimensions.width}
